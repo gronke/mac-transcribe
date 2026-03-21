@@ -1,0 +1,86 @@
+name: Build
+
+on:
+  push:
+    branches: [main, feature/**]
+  pull_request:
+    branches: [main]
+
+jobs:
+  bbb-audio:
+    name: bbb-audio (Rust)
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        run: rustup component add rustfmt clippy
+
+      - name: Install system dependencies
+        run: brew install opus
+
+      - name: Check formatting
+        run: cargo fmt --manifest-path bbb-audio/Cargo.toml -- --check
+
+      - name: Clippy
+        run: cargo clippy --manifest-path bbb-audio/Cargo.toml -- -D warnings
+
+      - name: Build (release)
+        run: cargo build --release --manifest-path bbb-audio/Cargo.toml
+
+      - name: Verify CLI
+        run: bbb-audio/target/release/bbb-audio --help
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: bbb-audio
+          path: bbb-audio/target/release/bbb-audio
+
+  swift:
+    name: video-transcript (Swift)
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve packages
+        run: swift package resolve
+
+      - name: Build (release)
+        run: swift build -c release
+
+      - name: Verify CLI
+        run: |
+          .build/release/video-transcript --help
+          .build/release/video-transcript bbb --help
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-transcript-arm64
+          path: .build/release/video-transcript
+
+  plugin:
+    name: BBB Plugin
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bbb-plugin
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: bbb-plugin
+          path: bbb-plugin/dist/
