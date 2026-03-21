@@ -13,10 +13,17 @@ else
     echo "Stopping BBB..."
 fi
 
+COMPOSE_FILES=(
+    -f "$DEV/docker-compose.bbb.yml"
+    -f "$DEV/docker-compose.override.yml"
+)
+if [ "${REVERSE_PROXY:-haproxy}" = "traefik" ]; then
+    COMPOSE_FILES+=(-f "$DEV/docker-compose.traefik.yml")
+fi
+
 docker compose \
     --project-directory "$BBB_DOCKER" \
-    -f "$DEV/docker-compose.bbb.yml" \
-    -f "$DEV/docker-compose.override.yml" \
+    "${COMPOSE_FILES[@]}" \
     down $VOLUMES
 
 echo "BBB stopped."

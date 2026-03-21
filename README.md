@@ -79,6 +79,27 @@ FluidAudio transitively pulls in:
 - **Speech recognition model** — managed by the OS via `AssetInventory`. Downloaded per-locale on first use.
 - **Diarization models** — 5 CoreML models downloaded by FluidAudio from Hugging Face on first use. Cached in `~/Library/Application Support/FluidAudio/Models/`.
 
+## Local BBB dev environment
+
+A full BigBlueButton 3.0 stack for developing and testing the live-transcription plugin.
+
+```bash
+# First run — prompts for domain and Let's Encrypt email:
+./dev/start.sh
+
+# Stop:
+./dev/stop.sh            # keep data
+./dev/stop.sh --volumes  # wipe data
+```
+
+By default, HAProxy terminates TLS with self-signed certificates. To use an existing global [Traefik](https://github.com/schuhkarton/docker-traefik) reverse proxy instead (real Let's Encrypt certs, shared ports 80/443):
+
+```bash
+REVERSE_PROXY=traefik ./dev/start.sh
+```
+
+This requires the `proxy` Docker network and a running Traefik instance. See `dev/docker-compose.traefik.yml` for details.
+
 ## BBB browser plugin
 
 A thin React plugin for BigBlueButton that displays the live transcript inside the BBB UI.

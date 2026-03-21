@@ -1,0 +1,40 @@
+# Traefik reverse proxy overlay — replaces HAProxy with external Traefik.
+#
+# Requires a global Traefik instance with the `proxy` Docker network.
+# See: /data/schuhkarton/GitHub/docker-traefik/
+#
+# Usage:
+#   REVERSE_PROXY=traefik ./dev/start.sh
+#
+# What this changes:
+#   - Disables haproxy (profiles: ["disabled"])
+#   - Removes nginx localhost port bindings (Traefik handles external access)
+#   - Routes Traefik → nginx:48087 (plain HTTP, no PROXY protocol)
+#   - TURN uses port 3478 directly (coturn on host network, unchanged)
+
+services:
+  haproxy:
+    profiles:
+      - disabled
+
+  nginx:
+    ports: !reset []
+    networks:
+      bbb-net:
+        ipv4_address: 10.7.7.34
+      proxy: {}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.bbb.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.bbb.entrypoints=websecure
+      - traefik.http.routers.bbb.tls.certresolver=letsencrypt
+      - traefik.http.services.bbb.loadbalancer.server.port=48087
+      - traefik.docker.network=proxy
+
+  bbb-web:
+    volumes:
+      - ../../dev/turn-stun-servers-traefik.xml.tmpl:/etc/bigbluebutton/turn-stun-servers.xml.tmpl:ro
+
+networks:
+  proxy:
+    external: true

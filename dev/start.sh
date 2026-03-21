@@ -39,11 +39,27 @@ mkdir -p "$BBB_DOCKER/conf"
 sed "s/__DOMAIN__/$DOMAIN/g" "$DEV/bbb-html5.yml" > "$BBB_DOCKER/conf/bbb-html5.yml"
 
 # ---- 4. Start BBB (builds plugin via Dockerfile.nginx multi-stage) ----
-echo "Starting BigBlueButton at https://$DOMAIN ..."
+COMPOSE_FILES=(
+    -f "$DEV/docker-compose.bbb.yml"
+    -f "$DEV/docker-compose.override.yml"
+)
+
+if [ "${REVERSE_PROXY:-haproxy}" = "traefik" ]; then
+    if ! docker network inspect proxy &>/dev/null; then
+        echo "Error: 'proxy' Docker network not found."
+        echo "Create it with: docker network create proxy"
+        echo "Then start the global Traefik instance."
+        exit 1
+    fi
+    COMPOSE_FILES+=(-f "$DEV/docker-compose.traefik.yml")
+    echo "Starting BigBlueButton at https://$DOMAIN (via Traefik)..."
+else
+    echo "Starting BigBlueButton at https://$DOMAIN (via HAProxy)..."
+fi
+
 docker compose \
     --project-directory "$BBB_DOCKER" \
-    -f "$DEV/docker-compose.bbb.yml" \
-    -f "$DEV/docker-compose.override.yml" \
+    "${COMPOSE_FILES[@]}" \
     up --build -d
 
 # ---- 5. Seed Greenlight users + harden ----
