@@ -1,0 +1,5 @@
+{
+  "name": "LiveTranscript",
+  "javascriptEntrypointUrl": "<<PLUGIN_URL>>/plugin.js",
+  "locales": []
+}

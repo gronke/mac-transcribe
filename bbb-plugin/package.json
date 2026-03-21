@@ -1,0 +1,22 @@
+{
+  "name": "bbb-live-transcript-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "webpack --mode production",
+    "dev": "webpack --mode development --watch"
+  },
+  "dependencies": {
+    "bigbluebutton-html-plugin-sdk": "^0.0.50",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "ts-loader": "^9.5.0",
+    "typescript": "^5.3.0",
+    "webpack": "^5.90.0",
+    "webpack-cli": "^5.1.0"
+  }
+}
