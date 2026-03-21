@@ -42,6 +42,14 @@ struct Args {
     /// Record audio to a WAV file instead of streaming PCM to stdout
     #[arg(long, value_name = "PATH")]
     record: Option<std::path::PathBuf>,
+
+    /// Accept any TLS certificate (e.g. self-signed)
+    #[arg(long)]
+    insecure: bool,
+
+    /// Path to a PEM-encoded CA certificate to trust
+    #[arg(long, value_name = "PATH")]
+    ca_certificate: Option<std::path::PathBuf>,
 }
 
 #[tokio::main]
@@ -52,23 +60,29 @@ async fn main() -> Result<()> {
         anyhow::bail!("Provide either a join URL or --server, --secret, and --meeting-id.");
     }
 
+    let tls = bbb_client::TlsConfig {
+        insecure: args.insecure,
+        ca_certificate: args.ca_certificate,
+    };
+
     // 1. Authenticate with BBB
     eprintln!("Connecting to BBB meeting...");
     let session = if let Some(url) = &args.join_url {
-        bbb_client::join_via_url(url).await?
+        bbb_client::join_via_url(url, &tls).await?
     } else {
         bbb_client::join_via_secret(
             args.server.as_deref().unwrap(),
             args.secret.as_deref().unwrap(),
             args.meeting_id.as_deref().unwrap(),
             &args.name,
+            &tls,
         )
         .await?
     };
     eprintln!("Session established (host: {})", session.server_host);
 
     // 2. Connect to GraphQL for speaker tracking and meeting info
-    let mut gql = graphql::GraphQLClient::connect(&session).await?;
+    let mut gql = graphql::GraphQLClient::connect(&session, &tls).await?;
     let meeting_info = gql.fetch_meeting_info().await?;
     eprintln!(
         "Joined meeting: {} (voice: {})",
@@ -104,7 +118,7 @@ async fn main() -> Result<()> {
     });
 
     // 6. Connect to SFU and start WebRTC audio reception
-    let result = webrtc_audio::run(&session, &meeting_info, pcm_tx, args.sample_rate).await;
+    let result = webrtc_audio::run(&session, &meeting_info, pcm_tx, args.sample_rate, &tls).await;
 
     // 7. Cleanup
     audio_output::emit_event(&serde_json::json!({"event": "ended"}));

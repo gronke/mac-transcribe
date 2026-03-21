@@ -4,7 +4,7 @@ use serde_json::{json, Value};
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::audio_output;
-use crate::bbb_client::BbbSession;
+use crate::bbb_client::{BbbSession, TlsConfig};
 
 pub struct MeetingInfo {
     pub meeting_id: String,
@@ -21,15 +21,21 @@ pub struct GraphQLClient {
 
 impl GraphQLClient {
     /// Connect to BBB's Hasura GraphQL endpoint (graphql-transport-ws protocol).
-    pub async fn connect(session: &BbbSession) -> Result<Self> {
+    pub async fn connect(session: &BbbSession, tls: &TlsConfig) -> Result<Self> {
         let request = http::Request::builder()
             .uri(format!("wss://{}/graphql", session.server_host))
             .header("Sec-WebSocket-Protocol", "graphql-transport-ws")
             .body(())?;
 
-        let (ws, _) = tokio_tungstenite::connect_async(request)
-            .await
-            .map_err(|e| anyhow!("GraphQL WebSocket connect failed: {e}"))?;
+        let connector = tls.native_tls_connector()?;
+        let (ws, _) = tokio_tungstenite::connect_async_tls_with_config(
+            request,
+            None,
+            false,
+            Some(tokio_tungstenite::Connector::NativeTls(connector)),
+        )
+        .await
+        .map_err(|e| anyhow!("GraphQL WebSocket connect failed: {e}"))?;
 
         let mut client = Self { ws, next_id: 1 };
 

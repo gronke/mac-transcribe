@@ -1,6 +1,32 @@
+use std::path::PathBuf;
+
 use anyhow::{anyhow, Result};
 use sha2::{Digest, Sha256};
 use url::Url;
+
+/// TLS options shared across HTTP and WebSocket connections.
+#[derive(Clone, Default)]
+pub struct TlsConfig {
+    /// Accept any server certificate (including self-signed).
+    pub insecure: bool,
+    /// Path to a PEM-encoded CA certificate to trust.
+    pub ca_certificate: Option<PathBuf>,
+}
+
+impl TlsConfig {
+    /// Build a `native_tls::TlsConnector` with these settings applied.
+    pub fn native_tls_connector(&self) -> Result<native_tls::TlsConnector> {
+        let mut builder = native_tls::TlsConnector::builder();
+        if self.insecure {
+            builder.danger_accept_invalid_certs(true);
+        }
+        if let Some(path) = &self.ca_certificate {
+            let pem = std::fs::read(path)?;
+            builder.add_root_certificate(native_tls::Certificate::from_pem(&pem)?);
+        }
+        Ok(builder.build()?)
+    }
+}
 
 pub struct BbbSession {
     pub session_token: String,
@@ -12,7 +38,7 @@ pub struct BbbSession {
 /// Follow redirects from a join URL (possibly via Nextcloud or similar) until
 /// we reach a BBB redirect containing `sessionToken`.  Also accepts URLs that
 /// already carry a `sessionToken` (e.g. pasted from the browser address bar).
-pub async fn join_via_url(join_url: &str) -> Result<BbbSession> {
+pub async fn join_via_url(join_url: &str, tls: &TlsConfig) -> Result<BbbSession> {
     let mut current_url = Url::parse(join_url)?;
 
     // If the URL already contains a sessionToken, use it directly.
@@ -20,9 +46,16 @@ pub async fn join_via_url(join_url: &str) -> Result<BbbSession> {
         return Ok(session);
     }
 
-    let client = reqwest::Client::builder()
-        .redirect(reqwest::redirect::Policy::none())
-        .build()?;
+    let mut builder = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none());
+    if tls.insecure {
+        builder = builder.danger_accept_invalid_certs(true);
+    }
+    if let Some(path) = &tls.ca_certificate {
+        let pem = std::fs::read(path)?;
+        builder = builder.add_root_certificate(reqwest::Certificate::from_pem(&pem)?);
+    }
+    let client = builder.build()?;
 
     let mut meeting_id = String::new();
 
@@ -99,6 +132,7 @@ pub async fn join_via_secret(
     secret: &str,
     meeting_id: &str,
     name: &str,
+    tls: &TlsConfig,
 ) -> Result<BbbSession> {
     let encoded_name = urlencoding::encode(name);
     let encoded_id = urlencoding::encode(meeting_id);
@@ -108,7 +142,7 @@ pub async fn join_via_secret(
     let base = server.trim_end_matches('/');
     let join_url = format!("{base}/api/join?{params}&checksum={checksum}");
 
-    join_via_url(&join_url).await
+    join_via_url(&join_url, tls).await
 }
 
 fn sha256_checksum(api_call: &str, params: &str, secret: &str) -> String {

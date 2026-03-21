@@ -21,7 +21,7 @@ use webrtc::rtp_transceiver::rtp_transceiver_direction::RTCRtpTransceiverDirecti
 use webrtc::rtp_transceiver::RTCRtpTransceiverInit;
 use webrtc::track::track_remote::TrackRemote;
 
-use crate::bbb_client::BbbSession;
+use crate::bbb_client::{BbbSession, TlsConfig};
 use crate::graphql::MeetingInfo;
 
 /// Full WebRTC lifecycle: create PeerConnection, signal via SFU, decode audio.
@@ -30,6 +30,7 @@ pub async fn run(
     meeting_info: &MeetingInfo,
     pcm_tx: mpsc::Sender<Vec<i16>>,
     sample_rate: u32,
+    tls: &TlsConfig,
 ) -> Result<()> {
     // --- webrtc-rs setup ---
 
@@ -138,9 +139,15 @@ pub async fn run(
         "wss://{}/bbb-webrtc-sfu?sessionToken={token}",
         session.server_host
     );
-    let (ws, _) = tokio_tungstenite::connect_async(&sfu_url)
-        .await
-        .map_err(|e| anyhow!("SFU connect: {e}"))?;
+    let connector = tls.native_tls_connector()?;
+    let (ws, _) = tokio_tungstenite::connect_async_tls_with_config(
+        &sfu_url,
+        None,
+        false,
+        Some(tokio_tungstenite::Connector::NativeTls(connector)),
+    )
+    .await
+    .map_err(|e| anyhow!("SFU connect: {e}"))?;
     let (mut ws_tx, mut ws_rx) = ws.split();
 
     // Send start message
