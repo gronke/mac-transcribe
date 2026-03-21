@@ -1,0 +1,15 @@
+# Build the BBB plugin
+FROM node:22-slim AS plugin
+WORKDIR /app
+COPY bbb-plugin/package.json ./
+RUN npm install
+COPY bbb-plugin/ ./
+ARG DOMAIN=bbb.localhost
+RUN npm run build \
+ && sed "s|<<PLUGIN_URL>>|https://${DOMAIN}/plugins/live-transcript|" \
+        manifest.json > dist/manifest.json
+
+# Extend the pre-built BBB nginx image with our plugin
+FROM alangecker/bbb-docker-nginx:v3.0.19-v5.4.3-1.29
+COPY --from=plugin /app/dist/ /www/plugins/live-transcript/
+COPY dev/nginx-plugin.nginx /etc/nginx/bbb/plugins.nginx

@@ -1,3 +1,10 @@
 .build/
 .swiftpm/
 bbb-audio/target/
+bbb-plugin/dist/
+bbb-plugin/node_modules/
+dev/bbb-docker/.env
+dev/bbb-docker/docker-compose.yml
+dev/bbb-docker/data/
+dev/bbb-docker/conf/bbb-html5.yml
+dev/bbb-docker/.cache/

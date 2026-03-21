@@ -1,0 +1,25 @@
+# Local development overrides for BBB.
+# Paths are relative to dev/bbb-docker/ (the --project-directory).
+
+services:
+  nginx:
+    build:
+      context: ../../
+      dockerfile: dev/Dockerfile.nginx
+      args:
+        DOMAIN: ${DOMAIN}
+
+  bbb-web:
+    volumes:
+      # Override TURN/STUN template to use EXTERNAL_IPv4 instead of DOMAIN
+      - ../../dev/turn-stun-servers.xml.tmpl:/etc/bigbluebutton/turn-stun-servers.xml.tmpl:ro
+    environment:
+      EXTERNAL_IPv4: ${EXTERNAL_IPv4}
+
+  greenlight:
+    environment:
+      BIGBLUEBUTTON_ENDPOINT: https://${DOMAIN}/bigbluebutton/api
+
+  # bbb-html5.yml (plugin registration) is handled by start.sh copying
+  # dev/bbb-html5.yml into dev/bbb-docker/conf/bbb-html5.yml, which the
+  # base compose mounts into apps-akka.

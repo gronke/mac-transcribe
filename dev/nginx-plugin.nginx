@@ -1,0 +1,7 @@
+# Serve the live-transcript BBB plugin static files.
+# Mounted into nginx at /etc/nginx/bbb/plugins.nginx
+location /plugins/live-transcript/ {
+    alias /www/plugins/live-transcript/;
+    add_header Cache-Control "no-store";
+    try_files $uri =404;
+}
