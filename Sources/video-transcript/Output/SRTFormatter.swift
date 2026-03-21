@@ -15,7 +15,7 @@ struct SRTFormatter {
         }.joined(separator: "\n\n")
     }
 
-    private static func srtTimestamp(_ time: TimeInterval) -> String {
+    static func srtTimestamp(_ time: TimeInterval) -> String {
         let hours = Int(time) / 3600
         let minutes = (Int(time) % 3600) / 60
         let seconds = Int(time) % 60

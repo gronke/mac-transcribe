@@ -1,0 +1,8 @@
+# BBB HTML5 client settings override for local development.
+# Mounted into apps-akka as /etc/bigbluebutton/bbb-html5.yml
+# __DOMAIN__ is replaced by start.sh at runtime.
+public:
+  app:
+    appName: BigBlueButton (dev)
+  pluginManifests:
+    - url: https://__DOMAIN__/plugins/live-transcript/manifest.json

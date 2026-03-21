@@ -12,7 +12,7 @@ struct PlainTextFormatter {
         }.joined(separator: "\n")
     }
 
-    private static func formatTimestamp(_ time: TimeInterval) -> String {
+    static func formatTimestamp(_ time: TimeInterval) -> String {
         let hours = Int(time) / 3600
         let minutes = (Int(time) % 3600) / 60
         let seconds = Int(time) % 60

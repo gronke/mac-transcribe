@@ -1,6 +1,6 @@
 import Foundation
 
-struct TranscriptionSegment: Sendable {
+struct TranscriptionSegment: Sendable, Codable {
     let text: String
     let startTime: TimeInterval
     let endTime: TimeInterval
